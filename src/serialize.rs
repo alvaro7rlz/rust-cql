@@ -91,10 +91,21 @@ impl<'a> CqlSerializable<'a> for CqlStringMap {
 }
 
 fn serialize_header<T: std::io::Write>(buf: &mut T, version: &u8, flags: &u8, stream: &i8, opcode: &u8, len: &u32) -> RCResult<()> {
-    try_bo!(buf.write_u8(*version), "Error serializing CqlRequest (version)");
+    println!("Inside serialize_header() version={:?}...", *version);  
+    match buf.write_u8(*version) {
+        Ok(_) => println!("Ok serializing version"),
+        Err(err) => match err {
+            byteorder::Error::UnexpectedEOF => println!("Error serializing: unexpected EOF"),
+            byteorder::Error::Io(ioerr) => println!("Error serializing: {:?}", ioerr),
+        }
+    }
+    println!("Inside serialize_header() 1 ...", );        
     try_bo!(buf.write_u8(*flags), "Error serializing CqlRequest (flags)");
+    println!("Inside serialize_header() 2 ...", );        
     try_bo!(buf.write_i8(*stream), "Error serializing CqlRequest (stream)");
+    println!("Inside serialize_header() 3 ...", );        
     try_bo!(buf.write_u8(*opcode), "Error serializing CqlRequest (opcode)");
+    println!("Inside serialize_header() 4 ...", );        
     try_bo!(buf.write_u32::<BigEndian>(*len), "Error serializing CqlRequest (length)");
     Ok(())
 }
@@ -156,16 +167,20 @@ impl<'a> CqlSerializable<'a> for CqlRequest<'a> {
             RequestExec(ref ps_id, ref params, ref cons, flags) => {
                 Err(RCError::new("Cannot serialize a EXECUTE request without a Client object", WriteError))
             },
-            _ => {             
+            _ => {     
+                println!("Inside serialize() 1 ...", );        
                 let len = (self.len(version)-8) as u32;
                 let ocode = self.opcode as u8;
                 serialize_header(buf, &version, &self.flags, &self.stream, &ocode, &len);
+                println!("Inside serialize() 2 ...", );        
 
                 match self.body {
                     RequestStartup(ref map) => {
+                        println!("Inside serialize() RequestStartup ...", );        
                         map.serialize(buf, version)
                     },
                     RequestQuery(ref query_str, ref consistency, flags) => {
+                        println!("Inside serialize() RequestQuery ...", );        
                         let len_str = query_str.len() as u32;
                         try_bo!(buf.write_u32::<BigEndian>(len_str), "Error serializing CqlRequest (query length)");
                         try_io!(buf.write(query_str.as_bytes()), "Error serializing CqlRequest (query)");
@@ -181,7 +196,10 @@ impl<'a> CqlSerializable<'a> for CqlRequest<'a> {
                         try_io!(buf.write(query_str.as_bytes()), "Error serializing CqlRequest (query)");
                         Ok(())               
                     },
-                    _ => Ok(())
+                    _ => {
+                        println!("Inside serialize() Unknown request type ...", );        
+                        Ok(())
+                    }
                 }
             }
         }

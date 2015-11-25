@@ -15,6 +15,10 @@ use super::serialize::CqlSerializable;
 use super::reader::*;
 use super::client::*;
 
+use std::sync::Arc;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+use std::thread;
 
 pub struct Async_client {
     client: Client
@@ -55,11 +59,40 @@ impl Async_client{
 	}
 	*/
 	
+	
 	/*
-	pub fn exec_prepared<'a>(&'a mut self, ps_id: CowStr, params: &'a [CqlValue], con: Consistency)  -> eventual::Future<RCResult<CqlResponse>,()> {
-		eventual::Future::spawn(move ||{
-			self.client.exec_prepared(ps_id,params,con)
+	pub fn exec_prepared(&mut self, ps_id: CowStr, params: &[CqlValue], con: Consistency)  -> eventual::Future<RCResult<CqlResponse>,()> {
+		eventual::Future::spawn(|| {
+			self.foo(ps_id)
 		});
 	}
 */
+	pub fn bar(&mut self, ps_id: CowStr, params: &[CqlValue], con: Consistency)  -> Receiver<RCResult<CqlResponse>> {
+		let (tx, rx): (Sender<RCResult<CqlResponse>>, Receiver<RCResult<CqlResponse>>) = mpsc::channel();
+
+        thread::spawn(move || {
+            // The thread takes ownership over `thread_tx`
+            // Each thread queues a message in the channel
+            let res = CqlResponse {
+            version: 1,
+            flags: 1,
+            stream: 1,
+            opcode: OpcodeResponse::OpcodeReady,
+            body: ResultVoid
+        };
+            tx.send(Ok(res)).unwrap();
+
+            // Sending is a non-blocking operation, the thread will continue
+            // immediately after sending its message
+            println!("thread finished!");
+        });
+
+        rx
+
+	}
+
+	pub fn foo(&mut self, ps_id: CowStr) -> RCResult<CowStr> {
+		Ok(Cow::Borrowed("ttrwe"))
+	}
+
 }

@@ -86,7 +86,7 @@ impl<T: std::io::Read> CqlReader for T {
 
 
     fn read_cql_bytes(&mut self, val_type: CqlBytesSize) -> RCResult<Vec<u8>> {
-        let len = try_rc!(self.read_cql_bytes_length(val_type), "Error reading bytes length");
+        let len: i32 = try_rc!(self.read_cql_bytes_length(val_type), "Error reading bytes length");
         if len <= 0 {
             Ok(vec![])
         } else {
@@ -446,6 +446,8 @@ impl<T: std::io::Read> CqlReader for T {
                 ResultUnknown
             },//ResponseEmpty,
         };
+
+        println!("Finished reading response!");
 
         Ok(CqlResponse {
             version: version_header,
